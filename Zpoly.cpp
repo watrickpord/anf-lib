@@ -1,57 +1,66 @@
 #include <iostream>
 #include <utility>
-#include <array>
+#include "constants.h"
+#include "Masks.h"
 
-// used for generating master masks (i.e. largest posssible) at compile time
-constexpr unsigned int max_num_variables = 8;
-constexpr unsigned int max_num_bits = 1<<max_num_variables;    // 2^num_variables
+// masks class instance looks like array of pointers to msx masks
+Masks mask_ptrs;
 
-// bitset of size max_num_bits we shall call BitVector
-typedef std::bitset<max_num_bits> BitVector;
+class Zpoly {
+    // for a given bit index (i.e. 0 to num_bits), return the string for the
+    // term (e.g. abc) that bit refers to
+    static std::string termAtBitIndex(unsigned int bit_index) {
+        if (bit_index == 0) {
+            return "1";
+        } else {
+            BitVector bit = 1<<bit_index;
+            std::string term_string = "";
 
-
-// generate bitmask string for ith mask (i.e. one that is the maximum size possible)
-template<unsigned int max_num_bits, unsigned int i>
-struct Bitmask_i {
-    char str[max_num_bits+1];
-
-    // constexpr array constructor
-    constexpr Bitmask_i() : str() {
-        // iterate bit by bit, setting relevant bits for ith mask high
-        for (int j=0; j<max_num_bits; j++) {
-            if ((j%(i)) >= ((i)>>1)) {
-                str[j] = '0';
-            } else {
-                str[j] = '1';
+            for (int i=0; i<num_variables; i++) {
+                // if bit has variable i in it, anding with that mask will leave it
+                // unchanged, while if that variable is not in term at bit, it will
+                // go to zero
+                if ((bit & *mask_ptrs[i]) == bit)
+                    term_string = term_string + variable_symbols[i];
             }
+            return term_string;
         }
-        // add null terminator
-        str[max_num_bits] = '\0';
+    }
+
+public:
+    Zpoly(int val_in) {
+        value = (BitVector)val_in;
+    }
+
+
+    BitVector value;
+    static std::string variable_symbols[num_variables];
+
+    std::string toString () {
+        if (value == 0) {
+            return "0";
+        } else {
+            // iterate bit by bit, adding termAtBitIndex whenever bit is 1
+            std::string polynomial_string = "";
+            for (int i=0; i<num_bits; i++) {
+                if (value.test(i)) {
+                    polynomial_string = polynomial_string + " + " + termAtBitIndex(i);
+                }
+            }
+            // remove leading (extraneous) plus and return
+            return polynomial_string.substr(3, polynomial_string.size());
+        }
     }
 };
 
-
-// TODO: generate array of bitmask objects...
-// probably put into templated struct with operator overloading on [], and  constructor
-// see https://stackoverflow.com/questions/2978259/programmatically-create-static-arrays-at-compile-time-in-c
-
-
-
-
-
+std::string Zpoly::variable_symbols[num_variables] = {"a", "b", "c"};
 
 int main() {
-    constexpr Bitmask_i bitmask0 = Bitmask_i<max_num_bits, 1>();
-    constexpr Bitmask_i bitmask1 = Bitmask_i<max_num_bits, 2>();
-    constexpr Bitmask_i bitmask2 = Bitmask_i<max_num_bits, 4>();
-    constexpr Bitmask_i bitmask3 = Bitmask_i<max_num_bits, 8>();
-    constexpr Bitmask_i bitmask4 = Bitmask_i<max_num_bits, 16>();
-    constexpr Bitmask_i bitmask5 = Bitmask_i<max_num_bits, 32>();
-    constexpr Bitmask_i bitmask6 = Bitmask_i<max_num_bits, 64>();
-    constexpr Bitmask_i bitmask7 = Bitmask_i<max_num_bits, 128>();
-
-    BitVector bv1 = BitVector(bitmask3.str);
-    std::cout << bv1 << std::endl;
+    for(int i=0; i<(1<<num_bits); i++) {
+        Zpoly myp(i);
+        std::cout << myp.value << std::endl;
+        std::cout << myp.toString() << std::endl;
+    }
 
     return 0;
 }
