@@ -85,7 +85,6 @@ public:
             BitVector mask = ~(*mask_ptrs[variable_index]);
             BitVector masked = mask & value;
             return Zpoly(masked);
-
         } else {
             // otherwise we need to do mask-rightshift-xor
             BitVector unmask_shifted = ~(*mask_ptrs[variable_index]) & value;
@@ -94,16 +93,20 @@ public:
         }
     }
 
+/*   ------ this function is fubar for unknown reasons ----------
     // evaulate for given set of inputs, given as a bitset
     BitVector evaluate(std::bitset<num_variables> inputs) const {
         // iterate through variables, evaulating for each, final restlt should
         // be either 1 or 0
         Zpoly intermediate_result = *this;
         for (int variable_index=0; variable_index<num_variables; variable_index++) {
+            std::cout << "IR: " << intermediate_result.value << std::endl;
             intermediate_result = intermediate_result.evaluateSingleVariable(variable_index, inputs[variable_index]);
+
         }
         return intermediate_result.value;
     }
+*/
 
     // left and right shifts are defined as mask shifts, going left uses inverse
     // of mask (i.e. to be used in multiplication algorithm),
@@ -112,9 +115,10 @@ public:
       if (shift_amt == 0) {
           return *this;
       } else {
-          BitVector mask = ~(*mask_ptrs[shift_amt-1]);
+          unsigned int variable_index = shift_amt-1;
+          BitVector mask = ~(*mask_ptrs[variable_index]);
           BitVector masked = mask & value;
-          BitVector shifted = masked << shift_amt;
+          BitVector shifted = masked << (1<<(variable_index));
           return Zpoly(shifted);
       }
     }
@@ -124,9 +128,9 @@ public:
       if (shift_amt == 0) {
           return *this;
       } else {
-          BitVector mask = *mask_ptrs[shift_amt];
+          BitVector mask = *mask_ptrs[shift_amt-1];
           BitVector masked = mask & value;
-          BitVector shifted = masked >> (1<<shift_amt);
+          BitVector shifted = masked >> (1<<(shift_amt-1));
           return Zpoly(shifted);
       }
     }
@@ -161,8 +165,8 @@ std::string Zpoly::variable_symbols[num_variables] = {"a", "b", "c"};
 int main() {
     for(int i=0; i<(1<<num_bits); i++) {
         Zpoly myp(i);
-        std::cout << "Multiplicand: " << myp.toString()<< std::endl;
-        std::cout << "Multiplied  : " << myp.evaluateSingleVariable(2, true).toString() << std::endl;
+        std::cout << "Q: " << myp.toString()<< std::endl;
+        std::cout << "A: " << (myp*Zpoly(16)).toString() << std::endl;
     }
 
     return 0;
