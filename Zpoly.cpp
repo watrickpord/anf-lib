@@ -74,6 +74,26 @@ public:
         return Zpoly(value ^ other.value);
     }
 
+    // evaluate polynomial for a given variable true or false
+    Zpoly evaluateSingleVariable(unsigned int variable_index, bool variable_value) const {
+        if (variable_index >= num_variables) {
+            std::cerr << "Error: evaluateSingleVariable variable_index out of bounds" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+        // if variable is false, simply remove terms containing it from the polynomial
+        if (variable_value == false) {
+            BitVector mask = ~(*mask_ptrs[variable_index]);
+            BitVector masked = mask & value;
+            return Zpoly(masked);
+
+        } else {
+            // otherwise we need to do mask-rightshift-xor
+            BitVector unmask_shifted = ~(*mask_ptrs[variable_index]) & value;
+            Zpoly mask_shifted = (*this)>>(variable_index+1);
+            return Zpoly(mask_shifted.value ^ unmask_shifted);
+        }
+    }
+
     // left and right shifts are defined as mask shifts, going left uses inverse
     // of mask (i.e. to be used in multiplication algorithm),
     // right shift uses mask (i.e. corrosponds to differentiation by variable)
@@ -131,7 +151,7 @@ int main() {
     for(int i=0; i<(1<<num_bits); i++) {
         Zpoly myp(i);
         std::cout << "Multiplicand: " << myp.toString() << std::endl;
-        std::cout << "Multiplied  : " << ((myp*Zpoly(3)).toString()) << std::endl;
+        std::cout << "Multiplied  : " << ((myp.evaluateSingleVariable(999,false)).toString()) << std::endl;
     }
 
     return 0;
